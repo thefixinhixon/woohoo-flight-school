@@ -67,7 +67,7 @@ Run-time finds can be added to `recomp/extra_seeds.txt`.
   - a manifest (`runtime/win/`) with the UTF-8 code page and per-monitor DPI awareness.
   `pipeline.py` copies SDL2.dll, libwinpthread-1.dll and libshaderc_shared.dll next to `pwr.exe`. `pwr` reads `$PWR_SETTINGS` (the profile's
   settings.json) at start for its options, before the command line, so a plain script can start it with a profile's settings. Tested by running
-  the cross-built exe under Wine, not yet on a real Windows machine.
+  the cross-built exe under Wine, and by the user on a real Windows PC (2026-11-01: works).
 - Windows build kit (`tools/make_windows_kit.py`): the MSYS2 MINGW64 packages the build needs (GCC, CMake, Ninja, SDL2,
   Vulkan headers and loader, shaderc, Python with Tk; dependencies resolved from the repository database, checked
   against its SHA-256 sums, documentation and test suites removed), this repository's files and a `.bat` that starts the

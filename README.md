@@ -23,8 +23,8 @@ included in this repository. How it works: [docs/architecture.md](docs/architect
 ## Status
 
 **Works:** the title intro, Mii sign-up, the trial flights with all three vehicles (plane, rocket belt, hang glider),
-Mission Flight and Free Flight as far as they have been played, saving, sound, keyboard, mouse and gamepad. 60 fps on
-the test machine, also at 4x resolution.
+Mission Flight and Free Flight as far as they have been played, saving, sound, keyboard, mouse and gamepad. Tested on
+Linux and Windows, at 60 fps, also at 4x resolution.
 
 Added for the PC (all optional, see [Display settings](#display-settings)):
 - 3D resolution up to 4x;
@@ -38,7 +38,8 @@ Added for the PC (all optional, see [Display settings](#display-settings)):
 **Known issues and limits:**
 - The whole game has not been played through yet. Later missions may still hit untested code; please report crashes
   with the terminal output.
-- Windows builds have been tested under Wine only, not yet on a real Windows PC.
+- Building on Windows itself (the build kit or MSYS2) is newer than the Windows port: it has been tested under Wine and
+  by GitHub Actions so far. Reports from Windows players are welcome.
 - No macOS build.
 - Touch-screen input needs the mouse, also when you play with a gamepad (the signature at sign-up, some menus).
 - No stereoscopic 3D: the game is shown in 2D.

@@ -15,7 +15,7 @@ jobs:
   kit:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Assemble the kit
         run: python3 tools/make_windows_kit.py --out dist
       - uses: actions/upload-artifact@v4
