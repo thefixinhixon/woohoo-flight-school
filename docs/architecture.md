@@ -68,6 +68,14 @@ Run-time finds can be added to `recomp/extra_seeds.txt`.
   `pipeline.py` copies SDL2.dll, libwinpthread-1.dll and libshaderc_shared.dll next to `pwr.exe`. `pwr` reads `$PWR_SETTINGS` (the profile's
   settings.json) at start for its options, before the command line, so a plain script can start it with a profile's settings. Tested by running
   the cross-built exe under Wine, not yet on a real Windows machine.
+- Windows build kit (`tools/make_windows_kit.py`): the MSYS2 MINGW64 packages the build needs (GCC, CMake, Ninja, SDL2,
+  Vulkan headers and loader, shaderc, Python with Tk; dependencies resolved from the repository database, checked
+  against its SHA-256 sums, documentation and test suites removed), this repository's files and a `.bat` that starts the
+  launcher with them first on PATH. No game material. `THIRD-PARTY.txt` lists each package's licence and source.
+- GitHub Actions (`.github/workflows/`): `build-check.yml` compiles the runtime and shaders without a game
+  (`-DPWR_RUNTIME_ONLY=ON`) on Linux and on Windows/MSYS2 for every push; `windows-kit.yml` assembles the kit for every
+  published release, tests its tools on a Windows runner and attaches it to the release. No workflow ever sees a dump
+  or builds the game.
 
 ## 3. Runtime
 

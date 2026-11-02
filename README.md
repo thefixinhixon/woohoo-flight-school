@@ -100,7 +100,15 @@ Copy the `save` folder to back up your progress.
 
 ## Windows
 
-Build and play from an [MSYS2](https://www.msys2.org/) **MINGW64** shell, which supplies the compiler and libraries:
+**Easiest: the Windows build kit.** Download `WoohooFlightSchool-Windows-kit.zip` from the
+[latest release](https://github.com/thefixinhixon/woohoo-flight-school/releases), unzip it and double-click
+`Woohoo! Flight School.bat`. The kit holds the launcher, Python, a C compiler and the libraries (about 200 MB to
+download), so there is nothing to install. Then continue with the [Quick start](#quick-start) steps: pick your dump, Build,
+Launch. The kit contains no game code or data. It is assembled and tested on Windows by GitHub Actions for every release
+(`tools/make_windows_kit.py`).
+
+**Or with MSYS2.** Build and play from an [MSYS2](https://www.msys2.org/) **MINGW64** shell, which supplies the
+compiler and libraries:
 
 ```bash
 pacman -S --needed mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-SDL2 \

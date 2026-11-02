@@ -136,7 +136,9 @@ def verify(rom, log=print):
 # ---------------------------------------------------------------- 2-5 build
 def _run(cmd, log, cwd=None, env=None):
     log('$ ' + ' '.join(f'"{c}"' if ' ' in c else c for c in cmd))
-    p = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors='replace')
+    # Windows: no console window per tool when the launcher runs without one (pythonw, the build kit)
+    p = subprocess.Popen(cmd, cwd=cwd, env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, errors='replace',
+                         creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
     for line in p.stdout: log(line.rstrip('\n'))
     if p.wait(): raise PipelineError(f'{os.path.basename(cmd[0])} failed with exit code {p.returncode}')
 

@@ -1,0 +1,64 @@
+# Windows build kit (tools/make_windows_kit.py): the launcher, Python, a C compiler and the libraries, so Windows players can
+# build the game from their own dump without installing MSYS2. The kit contains no game code or data. Built for every
+# published release and attached to it after a test on Windows; a manual run leaves it as a workflow artifact.
+name: Windows build kit
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Assemble the kit
+        run: python3 tools/make_windows_kit.py --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-kit
+          path: dist/WoohooFlightSchool-Windows-kit.zip
+          compression-level: 0
+          retention-days: 14
+
+  test:
+    needs: kit
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-kit
+      - name: Unpack
+        shell: pwsh
+        run: Expand-Archive WoohooFlightSchool-Windows-kit.zip -DestinationPath kit
+      - name: The kit's tools work on their own (no MSYS2)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'; $PSNativeCommandUseErrorActionPreference = $true
+          $k = "$PWD\kit\WoohooFlightSchool-Windows-kit"
+          $env:PATH = "$k\mingw64\bin;$env:PATH"
+          Get-Command gcc, cmake, ninja, glslc, python | Format-Table Name, Source
+          python -c "import tkinter; print('Tk', tkinter.TkVersion)"
+          python "$k\source\tools\pipeline.py" check
+          cmake -S "$k\source\recomp" -B check -G Ninja -DPWR_RUNTIME_ONLY=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build check
+
+  attach:
+    needs: test
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-kit
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" WoohooFlightSchool-Windows-kit.zip --clobber --repo "$GITHUB_REPOSITORY"

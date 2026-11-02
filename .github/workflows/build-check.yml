@@ -1,0 +1,53 @@
+# Compile check on every push: the tools parse, and the runtime and its shaders compile on Linux and on Windows (MSYS2, as in
+# the README). No game is involved: building the game needs a player's own dump and only ever happens on their machine.
+name: Build check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends cmake ninja-build gcc glslc libsdl2-dev libvulkan-dev python3-tk
+      - name: Python files parse
+        run: python3 -m compileall -q tools recomp launcher
+      - name: Pipeline tool check
+        run: python3 tools/pipeline.py check
+      - name: Compile the runtime and shaders
+        run: |
+          cmake -S recomp -B build-check -G Ninja -DPWR_RUNTIME_ONLY=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-check
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-SDL2
+            mingw-w64-x86_64-vulkan-headers mingw-w64-x86_64-vulkan-loader mingw-w64-x86_64-shaderc
+            mingw-w64-x86_64-python mingw-w64-x86_64-tk
+      - name: Python files parse
+        run: python -m compileall -q tools recomp launcher
+      - name: Pipeline tool check
+        run: python tools/pipeline.py check
+      - name: Compile the runtime and shaders
+        run: |
+          cmake -S recomp -B build-check -G Ninja -DPWR_RUNTIME_ONLY=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build build-check
