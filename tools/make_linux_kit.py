@@ -91,7 +91,8 @@ def fetch(name, cache):
     url, sha = DL[name]; path = os.path.join(cache, url.rsplit('/', 1)[1].replace('%2B', '+'))
     if not (os.path.exists(path) and hashlib.sha256(open(path, 'rb').read()).hexdigest() == sha):
         print('  get', url, flush=True)
-        with urllib.request.urlopen(url, timeout=300) as r: data = r.read()
+        req = urllib.request.Request(url, headers={'User-Agent': 'woohoo-flight-school-kit-builder/1.0'})   # LunarG refuses urllib's default
+        with urllib.request.urlopen(req, timeout=300) as r: data = r.read()
         if hashlib.sha256(data).hexdigest() != sha: sys.exit(f'{url}: SHA-256 mismatch')
         open(path, 'wb').write(data)
     return path
