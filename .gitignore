@@ -1,0 +1,25 @@
+# Game data and anything derived from it: never committed (regenerate from your own .cia)
+*.cia
+extracted/
+build/
+build-watch/
+build-*/
+play/
+save/
+
+# Local build outputs
+__pycache__/
+*.pyc
+tools/linux/ptracer.so
+
+# Private developer notes and tools (kept locally, not published)
+AGENTS.md
+CLAUDE.md
+.claude/
+docs/headless.md
+docs/c0-*.png
+docs/c1-*.png
+docs/c2-*.png
+docs/intro-pilots.png
+docs/w7-*.png
+tools/linux/

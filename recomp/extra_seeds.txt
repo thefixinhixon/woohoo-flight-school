@@ -1,0 +1,2 @@
+# Function entries found at run time (rt: indirect branch to unknown target). Format: 0xADDR A|T
+# Review before keeping: a target in the middle of a function means a corrupt pointer, not a missing entry.
