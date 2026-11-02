@@ -64,6 +64,15 @@ Added for the PC (all optional, see [Display settings](#display-settings)):
 
 ## Quick start
 
+**Easiest on Linux: the build kit AppImage.** Download `WoohooFlightSchool-Linux-kit-x86_64.AppImage` from the
+[latest release](https://github.com/thefixinhixon/woohoo-flight-school/releases), make it executable and start it
+(`chmod +x WoohooFlightSchool-Linux-kit-x86_64.AppImage`, then double-click it or run it). It holds the launcher, Python,
+a C compiler and the build tools (about 140 MB), so you only need a Vulkan driver and SDL2, which most desktop and gaming
+systems already have (glibc 2.29 or newer: Ubuntu 20.04+, Debian 11+, Fedora, Arch, SteamOS). The game it builds goes to
+the same install folder as below. Windows players: see [Windows](#windows).
+
+**From the source** (with the build tools listed above):
+
 ```bash
 python3 launcher/pwr_launcher.py
 ```

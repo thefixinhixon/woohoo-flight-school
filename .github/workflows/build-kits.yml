@@ -1,0 +1,120 @@
+# Build kits: everything a player needs to build the game from their own dump without installing compilers or libraries.
+# Windows: a zip (tools/make_windows_kit.py); Linux: an AppImage (tools/make_linux_kit.py). Neither contains game code or data.
+# Built for every published release and attached to it after a test on the target system; a manual run leaves them as
+# workflow artifacts.
+name: Build kits
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-kit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Assemble the kit
+        run: python3 tools/make_windows_kit.py --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-kit
+          path: dist/WoohooFlightSchool-Windows-kit.zip
+          compression-level: 0
+          retention-days: 14
+
+  windows-test:
+    needs: windows-kit
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows-kit
+      - name: Unpack
+        shell: pwsh
+        run: Expand-Archive WoohooFlightSchool-Windows-kit.zip -DestinationPath kit
+      - name: The kit's tools work on their own (no MSYS2)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'; $PSNativeCommandUseErrorActionPreference = $true
+          $k = "$PWD\kit\WoohooFlightSchool-Windows-kit"
+          $env:PATH = "$k\mingw64\bin;$env:PATH"
+          Get-Command gcc, cmake, ninja, glslc, python | Format-Table Name, Source
+          python -c "import tkinter; print('Tk', tkinter.TkVersion)"
+          python "$k\source\tools\pipeline.py" check
+          cmake -S "$k\source\recomp" -B check -G Ninja -DPWR_RUNTIME_ONLY=ON -DCMAKE_BUILD_TYPE=Release
+          cmake --build check
+
+  linux-kit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install squashfs-tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends squashfs-tools zstd
+      - name: Assemble the AppImage
+        run: python3 tools/make_linux_kit.py --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-kit
+          path: dist/WoohooFlightSchool-Linux-kit-x86_64.AppImage
+          compression-level: 0
+          retention-days: 14
+
+  linux-test:
+    needs: linux-kit
+    runs-on: ubuntu-24.04
+    container: ubuntu:22.04   # the oldest base the kit's libraries come from
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-kit
+      - name: Runtime libraries a player's system has (SDL2, Vulkan loader)
+        run: apt-get update && apt-get install -y --no-install-recommends libsdl2-2.0-0 libvulkan1
+      - name: The AppImage starts and its pipeline finds every tool
+        env:
+          APPIMAGE_EXTRACT_AND_RUN: 1   # no FUSE on the runner
+        run: |
+          chmod +x WoohooFlightSchool-Linux-kit-x86_64.AppImage
+          ./WoohooFlightSchool-Linux-kit-x86_64.AppImage --cli check | tee check.txt
+          ! grep -q MISSING check.txt
+      - name: The kit compiles the runtime and links a program against SDL2, Vulkan and libshaderc
+        run: |
+          set -eu
+          ./WoohooFlightSchool-Linux-kit-x86_64.AppImage --appimage-extract > /dev/null
+          K="$PWD/squashfs-root/usr"
+          export PATH="$K/bin:$K/cmake/bin:$PATH" ZIG_GLOBAL_CACHE_DIR="$PWD/zig-cache"
+          "$K/python/bin/python3" -c "import tkinter; print('Tk', tkinter.TkVersion)"
+          cmake -S "$K/source/recomp" -B check -G Ninja -DPWR_RUNTIME_ONLY=ON -DCMAKE_BUILD_TYPE=Release \
+            "-DPWR_KIT=$K/sysroot" "-DCMAKE_C_COMPILER=$K/bin/cc" "-DCMAKE_AR=$K/bin/ar" "-DCMAKE_RANLIB=$K/bin/ranlib"
+          cmake --build check
+          mkdir link && cd link
+          printf '%s\n' '#include <SDL2/SDL.h>' '#include <vulkan/vulkan.h>' '#include <dlfcn.h>' '#include <math.h>' '#include <pthread.h>' \
+            'static void *t(void *p) { return p; }' \
+            'int main(void) { SDL_version v; SDL_GetVersion(&v); uint32_t a = 0; vkEnumerateInstanceVersion(&a);' \
+            '  pthread_t th; pthread_create(&th, 0, t, 0); pthread_join(th, 0);' \
+            '  void *h = dlopen("libshaderc_shared.so.1", RTLD_NOW);' \
+            '  printf("SDL %d.%d.%d, Vulkan loader %u.%u, libshaderc %s, sqrt %.3f\n", v.major, v.minor, v.patch,' \
+            '         VK_API_VERSION_MAJOR(a), VK_API_VERSION_MINOR(a), h ? "loaded" : dlerror(), sqrt(2.0)); return h ? 0 : 1; }' > t.c
+          cc -O2 t.c -o t -I"$K/sysroot/include" "$K/sysroot/lib/libSDL2-2.0.so.0" "$K/sysroot/lib/libvulkan.so" -lpthread -ldl -lm \
+            -Wl,-rpath,'$ORIGIN'
+          cp "$K/sysroot/lib/libshaderc_shared.so.1" .
+          ./t
+
+  attach:
+    needs: [windows-test, linux-test]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          gh release upload "$TAG" windows-kit/WoohooFlightSchool-Windows-kit.zip linux-kit/WoohooFlightSchool-Linux-kit-x86_64.AppImage \
+            --clobber --repo "$GITHUB_REPOSITORY"

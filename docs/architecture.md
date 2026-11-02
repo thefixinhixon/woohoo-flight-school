@@ -72,10 +72,20 @@ Run-time finds can be added to `recomp/extra_seeds.txt`.
   Vulkan headers and loader, shaderc, Python with Tk; dependencies resolved from the repository database, checked
   against its SHA-256 sums, documentation and test suites removed), this repository's files and a `.bat` that starts the
   launcher with them first on PATH. No game material. `THIRD-PARTY.txt` lists each package's licence and source.
+- Linux build kit (`tools/make_linux_kit.py`): an AppImage with a standalone Python with Tk (python-build-standalone),
+  Zig as the C compiler (`zig cc`, Clang; its C libraries for other systems removed), CMake, Ninja, and from LunarG's
+  Vulkan SDK `glslc`, `libshaderc` and the Vulkan loader, plus Ubuntu 22.04's SDL2 headers and library. Every download
+  is pinned by SHA-256 and nothing downloaded is run while the kit is assembled (squashfs + the AppImage runtime). With
+  `$PWR_KIT` set (AppRun does), `pipeline.py` builds with the kit's compiler and sysroot (`-DPWR_KIT`), links `pwr` with
+  rpath `$ORIGIN` and copies `libshaderc` next to it; at run time `pwr` uses the system's SDL2 and Vulkan loader (the
+  kit's SDL2 is copied only when the system has none). The AppImage mounts at a new path each start, so the pipeline
+  configures the build folder afresh when the sources moved. Needs glibc 2.29 or newer. `AppImage --cli <args>` runs
+  `pipeline.py`.
 - GitHub Actions (`.github/workflows/`): `build-check.yml` compiles the runtime and shaders without a game
-  (`-DPWR_RUNTIME_ONLY=ON`) on Linux and on Windows/MSYS2 for every push; `windows-kit.yml` assembles the kit for every
-  published release, tests its tools on a Windows runner and attaches it to the release. No workflow ever sees a dump
-  or builds the game.
+  (`-DPWR_RUNTIME_ONLY=ON`) on Linux and on Windows/MSYS2 for every push; `build-kits.yml` assembles both kits for every
+  published release, tests them (Windows runner; Ubuntu 22.04 container: the AppImage's pipeline check, the runtime
+  compiled with the kit, a program linked against SDL2/Vulkan/libshaderc and run) and attaches them to the release. No
+  workflow ever sees a dump or builds the game.
 
 ## 3. Runtime
 

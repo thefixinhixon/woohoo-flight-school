@@ -46,6 +46,9 @@ EXE = 'pwr.exe' if os.name == 'nt' else 'pwr'
 # Windows: DLLs copied next to pwr.exe. vulkan-1.dll is not among them: the GPU driver installs the system's loader.
 WIN_DLLS = ['SDL2.dll', 'libwinpthread-1.dll']
 WIN_DLLS_OPTIONAL = [('libshaderc_shared.dll', 'shaderc_shared.dll')]   # translated vertex shaders; without it a slower GPU interpreter
+# Linux build kit (tools/make_linux_kit.py, an AppImage): $PWR_KIT is its usr/ folder with bin/ (cc = zig cc, ar, ranlib, ninja,
+# glslc) and sysroot/ (SDL2 and Vulkan headers and link libraries, libshaderc). pwr then uses the system's SDL2 and Vulkan loader.
+KIT = os.environ.get('PWR_KIT') if os.name != 'nt' else None
 
 
 def default_home():
@@ -70,6 +73,8 @@ def check(log=print):
         ('ninja (optional)' if os.name != 'nt' else 'ninja', have('ninja'),
          'optional: faster builds' if os.name != 'nt' else 'install Ninja (MSYS2: mingw-w64-x86_64-ninja)'),
     ]
+    if KIT:
+        rows.append(('SDL2 (system)', _system_sdl2(), 'install SDL2 with your package manager (libsdl2-2.0-0, SDL2 or sdl2)'))
     if os.name == 'nt':
         rows.append(('SDL2.dll', _find_dll('SDL2.dll'), 'install SDL2 (MSYS2: mingw-w64-x86_64-SDL2)'))
         rows.append(('shaderc DLL (optional)', _find_dll(*WIN_DLLS_OPTIONAL[0]), 'optional: faster vertex shaders (MSYS2: mingw-w64-x86_64-shaderc)'))
@@ -77,6 +82,16 @@ def check(log=print):
         log(f'{tool:18} {path or "MISSING: " + hint}')
     log('SDL2 and Vulkan development files are checked by CMake in the compile stage.')
     return rows
+
+
+def _system_sdl2():
+    """the system's SDL2 library, which a kit-built pwr loads at run time, or None"""
+    import ctypes, ctypes.util
+    for n in ('libSDL2-2.0.so.0', ctypes.util.find_library('SDL2-2.0'), ctypes.util.find_library('SDL2')):
+        try:
+            if n: ctypes.CDLL(n); return n
+        except OSError: pass
+    return None
 
 
 def _find_dll(*names):
@@ -166,7 +181,17 @@ def build(rom, home=None, jobs=None, compiler=None, debug=False, force=False, lo
     log('[4/5] compile')
     cfg = ['cmake', '-S', os.path.join(REPO, 'recomp'), '-B', bd, f'-DGEN_DIR={os.path.join(bd, "gen")}',
            f'-DCMAKE_BUILD_TYPE={"RelWithDebInfo" if debug else "Release"}']
-    if shutil.which('ninja') and not os.path.exists(os.path.join(bd, 'CMakeCache.txt')): cfg += ['-G', 'Ninja']
+    cache = os.path.join(bd, 'CMakeCache.txt')
+    if os.path.exists(cache):   # the sources moved (e.g. the AppImage kit mounts at a new path each start): configure afresh
+        home_dir = next((l.split('=', 1)[1].strip() for l in open(cache, errors='replace') if l.startswith('CMAKE_HOME_DIRECTORY:')), None)
+        if home_dir and os.path.normcase(os.path.realpath(home_dir)) != os.path.normcase(os.path.realpath(os.path.join(REPO, 'recomp'))):
+            log(f'  sources moved ({home_dir}): configuring the build folder afresh')
+            os.remove(cache); shutil.rmtree(os.path.join(bd, 'CMakeFiles'), ignore_errors=True)
+    if KIT:
+        k = os.path.join(KIT, 'bin')
+        cfg += [f'-DPWR_KIT={os.path.join(KIT, "sysroot")}', f'-DCMAKE_C_COMPILER={os.path.join(k, "cc")}',
+                f'-DCMAKE_AR={os.path.join(k, "ar")}', f'-DCMAKE_RANLIB={os.path.join(k, "ranlib")}']
+    if shutil.which('ninja') and not os.path.exists(cache): cfg += ['-G', 'Ninja']
     elif os.name == 'nt' and not os.path.exists(os.path.join(bd, 'CMakeCache.txt')):
         raise PipelineError('Ninja not found: on Windows CMake would pick Visual Studio, which cannot build the generated code')
     if compiler: cfg.append(f'-DCMAKE_C_COMPILER={compiler}')
@@ -177,6 +202,13 @@ def build(rom, home=None, jobs=None, compiler=None, debug=False, force=False, lo
     built = next((p for p in (os.path.join(bd, EXE), os.path.join(bd, 'Release', EXE), os.path.join(bd, 'RelWithDebInfo', EXE)) if os.path.exists(p)), None)
     if not built: raise PipelineError(f'no {EXE} in {bd}')
     shutil.copy2(built, os.path.join(home, 'bin', EXE))
+    if KIT:   # translated vertex shaders; SDL2 from the system, the kit's copy only if there is none
+        lib = os.path.join(KIT, 'sysroot', 'lib')
+        shutil.copy2(os.path.join(lib, 'libshaderc_shared.so.1'), os.path.join(home, 'bin', 'libshaderc_shared.so.1'))
+        if not _system_sdl2():
+            shutil.copy2(os.path.join(lib, 'libSDL2-2.0.so.0'), os.path.join(home, 'bin', 'libSDL2-2.0.so.0'))
+            log('  warning: no SDL2 on this system; using the kit\'s copy, which needs the usual desktop libraries. '
+                'If the game does not start, install SDL2 (libsdl2-2.0-0, SDL2 or sdl2).')
     if os.name == 'nt':
         for names in [(n,) for n in WIN_DLLS] + WIN_DLLS_OPTIONAL:
             src = _find_dll(*names)

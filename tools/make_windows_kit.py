@@ -2,7 +2,7 @@
 
     python3 tools/make_windows_kit.py [--out DIR] [--name NAME]
 
-Runs on Linux (GitHub Actions: .github/workflows/windows-kit.yml) or anywhere with Python 3.8+ and `zstd` (or Python 3.14+).
+Runs on Linux (GitHub Actions: .github/workflows/build-kits.yml) or anywhere with Python 3.8+ and `zstd` (or Python 3.14+).
 It contains no game code or data. Layout of the zip:
 
   <name>/Woohoo! Flight School.bat   starts the launcher with the kit's tools first on PATH
