@@ -50,6 +50,12 @@ static double now_s(void) { struct timespec t; clock_gettime(CLOCK_MONOTONIC, &t
 
 int main(int argc, char **argv) {
     const char *dir = "extracted"; int scale = 2;
+    /* the launcher sends stdout/stderr to the profile's pwr.log: write it line by line (Windows has no line buffering) */
+#ifdef _WIN32
+    setvbuf(stdout, NULL, _IONBF, 0);
+#else
+    setvbuf(stdout, NULL, _IOLBF, 0);
+#endif
     settings_file(&scale);
 #ifdef _WIN32
     timeBeginPeriod(1);   /* sleeps (the 60 Hz loop, the DSP clock's ~5 ms ticks) otherwise round up to the 15.6 ms tick */

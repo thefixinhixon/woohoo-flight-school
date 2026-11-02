@@ -28,7 +28,7 @@ Install folder:
   profiles/<name>/       save/ (the game's save data) + settings.json (window, layout, filters, 3D resolution, audio,
                          extra arguments; the in-game F1 overlay writes its changes back here)
 """
-import argparse, hashlib, json, os, platform, shutil, struct, subprocess, sys, time
+import argparse, hashlib, json, os, platform, shutil, struct, subprocess, sys, threading, time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(REPO, 'tools'))
@@ -280,14 +280,34 @@ def launch(home=None, name='default', extra=(), wait=True, log=print):
                PWR_SETTINGS=os.path.join(profile_dir(home, name), 'settings.json'))   # the in-game overlay saves changes here
     cmd = command_line(home, name, extra)
     log('$ ' + ' '.join(cmd))
-    if os.name == 'nt' and not wait:   # from the launcher: no console window; the game's messages go to the profile's pwr.log
-        out = open(os.path.join(profile_dir(home, name), 'pwr.log'), 'w')
-        p = subprocess.Popen(cmd, cwd=profile_dir(home, name), env=env, stdout=out, stderr=subprocess.STDOUT,
-                             creationflags=subprocess.CREATE_NO_WINDOW)
-        out.close()
-        return p
-    p = subprocess.Popen(cmd, cwd=profile_dir(home, name), env=env)
-    return p.wait() if wait else p
+    # the game's messages always go to the profile's pwr.log (the previous run's kept as pwr.log.1), and are copied to the
+    # terminal when there is one. The game writes the file itself, so it never depends on the launcher staying open.
+    path = log_path(home, name)
+    if os.path.exists(path): os.replace(path, path + '.1')
+    out = open(path, 'w')
+    p = subprocess.Popen(cmd, cwd=profile_dir(home, name), env=env, stdout=out, stderr=subprocess.STDOUT,
+                         creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0) if not wait else 0)
+    out.close()
+    log(f'  messages: {path}')
+    if wait: _follow(path, p); return p.returncode
+    if sys.stdout and sys.stdout.isatty(): threading.Thread(target=_follow, args=(path, p), daemon=True).start()
+    return p
+
+
+def log_path(home, name): return os.path.join(profile_dir(home, name), 'pwr.log')
+
+
+def _follow(path, p):
+    """copy what the game writes to its log to our stdout until it exits"""
+    with open(path, errors='replace') as f:
+        while True:
+            line = f.readline()
+            if line: sys.stdout.write(line); sys.stdout.flush(); continue
+            if p.poll() is not None:
+                rest = f.read()
+                if rest: sys.stdout.write(rest); sys.stdout.flush()
+                return
+            time.sleep(0.2)
 
 
 # ---------------------------------------------------------------- command line

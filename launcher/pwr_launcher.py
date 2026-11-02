@@ -105,6 +105,7 @@ class Launcher(tk.Tk):
         b = ttk.Frame(f); b.grid(row=row + 2, column=0, columnspan=4, sticky='w', **pad)
         ttk.Button(b, text='Save settings', command=self.save_profile).pack(side='left', padx=3)
         self.launch_btn = ttk.Button(b, text='Launch', command=self.launch); self.launch_btn.pack(side='left', padx=3)
+        ttk.Button(b, text='Open log folder', command=self.open_log_folder).pack(side='left', padx=3)
         ttk.Label(f, text='In game: F11 or Alt+Enter fullscreen, F9 or pad Back/Select next screen layout, F1 settings overlay.').grid(row=row + 3, column=0, columnspan=4, sticky='w', **pad)
         f.columnconfigure(3, weight=1)
 
@@ -214,6 +215,16 @@ class Launcher(tk.Tk):
         try: P.delete_profile(self.home.get(), n)
         except P.PipelineError as e: messagebox.showerror('Delete profile', str(e)); return
         self.refresh_install(); self.load_profile()
+
+    def open_log_folder(self):
+        """the profile folder: pwr.log (this or the last run), pwr.log.1 (the run before), save/, settings.json"""
+        d = P.profile_dir(self.home.get() or P.default_home(), self.profile.get())
+        if not os.path.isdir(d): messagebox.showinfo('Log folder', f'No log yet: {d} does not exist.'); return
+        import subprocess
+        try:
+            if os.name == 'nt': os.startfile(d)
+            else: subprocess.Popen(['open' if sys.platform == 'darwin' else 'xdg-open', d])
+        except OSError as e: messagebox.showerror('Log folder', f'{d}\n{e}')
 
     def launch(self):
         if self.game: return

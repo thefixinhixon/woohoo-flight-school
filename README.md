@@ -130,7 +130,7 @@ python launcher/pwr_launcher.py
 - The install folder is `%LOCALAPPDATA%\pwr-port`. `bin\` holds `pwr.exe` and the DLLs it needs, so after building
   you can start `pwr.exe` without MSYS2.
 - The GPU driver provides Vulkan (`vulkan-1.dll`). Keep the driver up to date.
-- Started from the launcher, the game opens no console window; its messages go to `pwr.log` in the profile folder.
+- Started from the launcher, the game opens no console window; its messages go to `pwr.log` in the profile folder (as on Linux).
 - Visual Studio's compiler cannot build the generated code. Ninja is required so that CMake does not pick it.
 
 ## Controls
@@ -190,8 +190,10 @@ Sound can be muted in the launcher.
 - **The gamepad's Select button does nothing in the game:** it switches the screen layout by default; see
   [Controls](#controls).
 - **The terminal prints `pwr: audio ring fill ..., underruns N`:** a rising N means audio dropouts; please report it.
-- **Reporting a crash:** start the game from a terminal (`python3 tools/pipeline.py run --profile <name>`, or
-  `pwr.log` in the profile folder on Windows) and include the last lines it printed.
+- **Reporting a crash:** every run writes the game's messages to `pwr.log` in the profile folder (the launcher's
+  **Open log folder** button opens it; see [Saving](#saving) for where profiles live). The run before is kept as
+  `pwr.log.1`, so the log of a crash survives starting the game again. Attach the log, or its last 30 lines, to your
+  report.
 
 ## Licence
 
