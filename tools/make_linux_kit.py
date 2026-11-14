@@ -56,7 +56,13 @@ export PATH="$HERE/usr/bin:$HERE/usr/cmake/bin:$PATH"
 export PWR_KIT="$HERE/usr"
 export ZIG_GLOBAL_CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/woohoo-flight-school/zig"
 if [ "$1" = "--cli" ]; then shift; exec "$HERE/usr/python/bin/python3" "$HERE/usr/source/tools/pipeline.py" "$@"; fi
-exec "$HERE/usr/python/bin/python3" "$HERE/usr/source/launcher/pwr_launcher.py" "$@"
+# The launcher prefers the system's Python when its Tk draws with Xft (anti-aliased system fonts); the kit's Tk has X core
+# fonts only. PWR_KIT_PYTHON=bundled always uses the kit's.
+PY="$HERE/usr/python/bin/python3"
+if [ "${PWR_KIT_PYTHON:-}" != bundled ] && command -v python3 >/dev/null 2>&1 && python3 -c 'import sys, tkinter
+sys.exit(0 if sys.version_info >= (3, 8) and tkinter.Tcl().eval("package require Tk; ::tk::pkgconfig get fontsystem") == "xft" else 1)' >/dev/null 2>&1
+then PY=python3; fi
+exec "$PY" "$HERE/usr/source/launcher/pwr_launcher.py" "$@"
 '''
 WRAP = '#!/bin/sh\n# {what}\nexec "$(dirname "$(readlink -f "$0")")/../zig/zig" {cmd} "$@"\n'
 DESKTOP = '''[Desktop Entry]

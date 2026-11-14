@@ -30,11 +30,14 @@ def init(root):
     global S
     try: S = max(1.0, round(root.winfo_fpixels('1i') / 96.0 * 4) / 4)
     except tk.TclError: S = 1.0
-    fams = set(tkfont.families(root))
-    pick = lambda names, default: next((n for n in names if n in fams), default)
-    base = pick(['Lato', 'Inter', 'Segoe UI', 'Cantarell', 'Noto Sans', 'Ubuntu', 'DejaVu Sans', 'Helvetica'], 'TkDefaultFont')
+    # Tk without Xft (e.g. python-build-standalone's) lists only X core fonts, in lower case
+    fams = {n.lower(): n for n in tkfont.families(root)}
+    pick = lambda names, default: next((fams[n.lower()] for n in names if n.lower() in fams), default)
+    base = pick(['Lato', 'Inter', 'Segoe UI', 'Cantarell', 'Noto Sans', 'Ubuntu', 'DejaVu Sans', 'Nimbus Sans L', 'Nimbus Sans', 'Helvetica'],
+                tkfont.nametofont('TkDefaultFont', root).actual('family'))
     heavy = pick(['Lato Black', 'Inter Black', 'Segoe UI Black', 'Noto Sans Black'], None)
-    mono = pick(['JetBrains Mono', 'Cascadia Mono', 'DejaVu Sans Mono', 'Consolas', 'Menlo', 'Courier New'], 'TkFixedFont')
+    mono = pick(['JetBrains Mono', 'Cascadia Mono', 'DejaVu Sans Mono', 'Consolas', 'Menlo', 'Courier New', 'Nimbus Mono L'],
+                tkfont.nametofont('TkFixedFont', root).actual('family'))
 
     def mk(name, fam, size, bold=False):
         F[name] = tkfont.Font(root, family=fam, size=-px(size), weight='bold' if bold else 'normal')
@@ -42,6 +45,7 @@ def init(root):
     mk('key', heavy or base, 12, not heavy); mk('label', base, 14, True); mk('body', base, 13); mk('bodyb', base, 13, True)
     mk('small', base, 12); mk('tiny', heavy or base, 9, not heavy); mk('nav', base, 14); mk('navb', base, 14, True)
     mk('btn', base, 14, True); mk('btns', base, 13, True); mk('glyph', base, 15, True); mk('mono', mono, 12)
+    mk('sym', base, 12); mk('syml', base, 15)   # symbols (check marks, arrows): core fonts have them only in the regular weight
     root.option_add('*Font', F['body'])
     st = ttk.Style(root)
     try: st.theme_use('clam')
@@ -453,7 +457,7 @@ class StageStepper(tk.Canvas):
             if st == 'active': circle(self, x, y, px(30), '#24577F')
             circle(self, x, y, px(20), col)
             if st in ('done', 'failed'):
-                self.create_text(x, y, text='✓' if st == 'done' else '!', fill=T['bg'], font=F['key'])
+                self.create_text(x, y, text='✓' if st == 'done' else '!', fill=T['bg'], font=F['sym'] if st == 'done' else F['key'])
             on = st != 'pending'
             self.create_text(x, y + px(30), text=name, fill=T['text'] if on else T['muted'], font=F['bodyb'] if on else F['body'])
 

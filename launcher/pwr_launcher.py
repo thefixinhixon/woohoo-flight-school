@@ -25,8 +25,8 @@ ROM_TYPES = [('3DS game dumps', '*.cia *.3ds *.cci *.cxi'), ('All files', '*')]
 PAGES = [('play', 'Play', '▶'), ('display', 'Display', '▣'), ('graphics', 'Graphics', '◆'), ('gameplay', 'Gameplay & audio', '♪'),
          ('setup', 'Setup', '⚙'), ('log', 'Log', '≡')]
 STAGES = ['Verify', 'Extract', 'Recompile', 'Compile', 'Install']
-STAGE_TEXT = ['Checking the dump…', 'Extracting the game files…', "Recompiling the game's ARM code to C…", 'Compiling the native game…',
-              'Installing…']
+STAGE_TEXT = ['Checking the dump...', 'Extracting the game files...', "Recompiling the game's ARM code to C...", 'Compiling the native game...',
+              'Installing...']
 HEAD_H, RAIL_W, STATUS_H = 140, 200, 28
 x_ = lambda v: f'{v}×'
 
@@ -40,10 +40,10 @@ def elide(text, font, width):
     """shorten text in the middle (paths) to fit width pixels"""
     if font.measure(text) <= width: return text
     a, b = text[:len(text) // 2], text[len(text) // 2:]
-    while (a or b) and font.measure(a + '…' + b) > width:
+    while (a or b) and font.measure(a + '...' + b) > width:
         if len(a) >= len(b): a = a[:-1]
         else: b = b[1:]
-    return a + '…' + b
+    return a + '...' + b
 
 
 def short(path):
@@ -162,7 +162,7 @@ class Launcher(tk.Tk):
             self.summary[k].grid(row=i, column=1, sticky='e', pady=px(4))
         grid.columnconfigure(1, weight=1)
         b = tk.Frame(card.body, bg=T['surface']); b.pack(fill='x', padx=px(14), pady=(px(6), px(12)))
-        ui.PillButton(b, 'New…', self.new_profile, 'secondary', width=100, height=32).pack(side='left')
+        ui.PillButton(b, 'New...', self.new_profile, 'secondary', width=100, height=32).pack(side='left')
         ui.PillButton(b, 'Delete', self.delete_profile, 'ghost', width=100, height=32).pack(side='right')
 
         keys = ui.Card(f, 'In-game keys'); keys.pack(fill='x', padx=px(28), pady=(px(16), 0))
@@ -240,7 +240,7 @@ class Launcher(tk.Tk):
         r = tk.Frame(c.body, bg=T['surface']); r.pack(fill='x', padx=px(14), pady=(px(8), 0))
         self.verify_btn = ui.PillButton(r, 'Verify', self.verify, 'secondary', width=96)
         self.verify_btn.pack(side='right', padx=(px(8), 0))
-        ui.PillButton(r, 'Browse…', self.pick_rom, 'secondary', width=104).pack(side='right', padx=(px(8), 0))
+        ui.PillButton(r, 'Browse...', self.pick_rom, 'secondary', width=104).pack(side='right', padx=(px(8), 0))
         ui.Entry(r, self.rom, width=400).pack(side='left', fill='x', expand=True)
         self.checks = tk.Frame(c.body, bg=T['surface']); self.checks.pack(fill='x', padx=px(14), pady=(px(12), px(14)))
         self.set_checks(None)
@@ -249,7 +249,7 @@ class Launcher(tk.Tk):
         r = tk.Frame(c.body, bg=T['surface']); r.pack(fill='x', padx=px(14), pady=(px(6), 0))
         tk.Label(r, text='Install folder', bg=T['surface'], fg=T['muted'], font=F['body']).pack(side='left')
         self.home_l = tk.Label(r, bg=T['surface'], fg=T['text'], font=F['bodyb']); self.home_l.pack(side='left', padx=px(12))
-        ui.PillButton(r, 'Change…', self.pick_home, 'ghost', width=96, height=30).pack(side='right')
+        ui.PillButton(r, 'Change...', self.pick_home, 'ghost', width=96, height=30).pack(side='right')
         self.stepper = ui.StageStepper(c.body, STAGES, bg=T['surface']); self.stepper.pack(fill='x', pady=(px(10), 0))
         r = tk.Frame(c.body, bg=T['surface']); r.pack(fill='x', padx=px(14), pady=(px(6), px(14)))
         self.build_btn = ui.PillButton(r, 'Build', lambda: self.build(False), 'primary', width=140, height=40)
@@ -266,7 +266,7 @@ class Launcher(tk.Tk):
         if r is None:
             rows = [(None, 'Pick your .cia, .3ds/.cci or .cxi and press Verify')]
         elif r == 'busy':
-            rows = [(None, 'Checking the dump…')]
+            rows = [(None, 'Checking the dump...')]
         elif isinstance(r, str):
             rows = [(False, r)]
         else:
@@ -278,7 +278,7 @@ class Launcher(tk.Tk):
             col = T['muted'] if ok is None else (T['ok'] if ok else T['error'])
             cv = tk.Canvas(self.checks, bg=T['surface'], highlightthickness=0, bd=0, width=px(18), height=px(18))
             ui.circle(cv, px(9), px(9), px(18), col)
-            cv.create_text(px(9), px(9), text='' if ok is None else ('✓' if ok else '✕'), fill=T['bg'], font=F['key'])
+            cv.create_text(px(9), px(9), text='' if ok is None else ('✓' if ok else '✕'), fill=T['bg'], font=F['sym'])
             cv.pack(side='left'); tk.Label(self.checks, text=text, bg=T['surface'], fg=T['text'] if ok is not None else T['muted'],
                                            font=F['bodyb'] if ok is not None else F['body']).pack(side='left', padx=(px(8), px(24)))
 
@@ -319,9 +319,11 @@ class Launcher(tk.Tk):
         ui.rounded(cv, px0, px(48), px1, px(92), px(22), T['glass'], T['glass_line'], tags=('picker',))
         cv.create_text(px0 + px(18), px(62), anchor='w', text='PROFILE', fill=T['muted'], font=F['tiny'], tags=('picker',))
         name = self.profile.get()
-        while F['bodyb'].measure(name) > px(118) and len(name) > 2: name = name[:-2] + '…' if not name.endswith('…') else name[:-2] + '…'
+        if F['label'].measure(name) > px(118):
+            while len(name) > 1 and F['label'].measure(name + '...') > px(118): name = name[:-1]
+            name += '...'
         cv.create_text(px0 + px(18), px(78), anchor='w', text=name, fill=T['text'], font=F['label'], tags=('picker',))
-        cv.create_text(px1 - px(22), px(70), text='▾', fill=T['muted'], font=F['label'], tags=('picker',))
+        cv.create_text(px1 - px(22), px(70), text='▾', fill=T['muted'], font=F['syml'], tags=('picker',))
 
     def update_play_button(self):
         if self.game: self.play_pill.configure(text='STOP', icon='■', kind='danger', enabled=True, command=self.stop)
@@ -336,7 +338,11 @@ class Launcher(tk.Tk):
                 ui.rounded(cv, px(12), y + px(10), px(16), y + px(30), px(2), T['accent'])
             elif key == self.rail_hot:
                 ui.rounded(cv, px(12), y, px(RAIL_W - 12), y + px(40), px(10), '#123254')
-            cv.create_text(px(38), y + px(20), text=glyph, fill=T['accent'] if on else T['muted'], font=F['glyph'])
+            col = T['accent'] if on else T['muted']
+            if key == 'setup':   # a ring: no font has a gear everywhere (X core fonts have none)
+                ui.circle(cv, px(38), y + px(20), px(15), col); ui.circle(cv, px(38), y + px(20), px(7), T['surface2'] if on else
+                                                                        ('#123254' if key == self.rail_hot else T['rail']))
+            else: cv.create_text(px(38), y + px(20), text=glyph, fill=col, font=F['glyph'])
             cv.create_text(px(58), y + px(20), anchor='w', text=label, fill=T['text'] if on else T['muted'], font=F['navb'] if on else F['nav'])
             if key == 'setup' and not self.manifest: ui.circle(cv, px(RAIL_W - 36), y + px(20), px(9), T['play'])
             if key == 'setup' and self.worker: ui.circle(cv, px(RAIL_W - 36), y + px(20), px(9), T['accent'])
@@ -528,8 +534,8 @@ class Launcher(tk.Tk):
         for n in self.profiles:
             m.add_radiobutton(label=n, value=n, variable=self.profile, command=self.switch_profile)
         m.add_separator()
-        m.add_command(label='New profile…', command=self.new_profile)
-        m.add_command(label='Delete this profile…', command=self.delete_profile)
+        m.add_command(label='New profile...', command=self.new_profile)
+        m.add_command(label='Delete this profile...', command=self.delete_profile)
         m.add_command(label='Open profile folder', command=self.open_log_folder)
         x = self.head.winfo_rootx() + self.head.winfo_width() - px(200) - px(168)
         y = self.head.winfo_rooty() + px(96)
@@ -617,7 +623,7 @@ class Launcher(tk.Tk):
             except P.PipelineError as e: self.log(f'BUILD FAILED: {e}')
             except Exception as e: self.log(f'BUILD FAILED (unexpected): {e!r}')   # noqa: BLE001
         self.worker = threading.Thread(target=run, daemon=True); self.worker.start()
-        self.build_btn.set(text='Building…', kind='ghost', enabled=False); self.rebuild_btn.set(enabled=False)
+        self.build_btn.set(text='Building...', kind='ghost', enabled=False); self.rebuild_btn.set(enabled=False)
         self.update_play_button(); self.draw_rail(); self.update_status()
 
     def build_done(self):
@@ -658,7 +664,7 @@ class Launcher(tk.Tk):
         try: g.terminate()
         except OSError: pass
         self.after(3000, lambda: g.poll() is None and g.kill())
-        self.toast.show('Stopping the game…', T['warn'])
+        self.toast.show('Stopping the game...', T['warn'])
 
     def game_exited(self):
         code = self.game.returncode; self.game = None
