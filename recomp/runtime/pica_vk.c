@@ -456,6 +456,10 @@ static VkSampler sampler_for(int unit) {
     static float max_aniso = -1; if (max_aniso < 0) { VkPhysicalDeviceFeatures df; VkPhysicalDeviceProperties dp; vkGetPhysicalDeviceFeatures(phys, &df);
         vkGetPhysicalDeviceProperties(phys, &dp); max_aniso = df.samplerAnisotropy ? dp.limits.maxSamplerAnisotropy : 1; }
     int an = (min || mag) && q_aniso > 1 && max_aniso > 1 ? (q_aniso >= 16 ? 4 : q_aniso >= 8 ? 3 : q_aniso >= 4 ? 2 : 1) : 0;
+    /* textures with a single level (sprites, glows, stars, UI) gain little from anisotropy but pay for every extra tap: at night in Free Flight 16x on them
+       halved the frame rate at 4x (60 -> 30); PWR_VK_ANISO_ALL=1 = old behaviour (A/B) */
+    static int amo = -1; if (amo < 0) amo = getenv("PWR_VK_ANISO_ALL") == NULL;
+    if (amo && maxl == 0) an = 0;
     int key = ws | wt << 2 | mag << 4 | min << 5 | mip << 6 | maxl << 7 | bord << 11 | an << 13;
     if (!samplers[key]) {
         static const VkBorderColor bc[3] = { VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK, VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK, VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE };
@@ -700,11 +704,14 @@ static void replay(const DrawRec *r, VkPipeline *bound) {
     static int dbg = -1; static unsigned dn; if (dbg < 0) { const char *e = getenv("PWR_VK_DBG"); dbg = !e ? 0 : !strcmp(e, "scissor") ? 1 : !strcmp(e, "nodraw") ? 2 : !strcmp(e, "half") ? 3 : 0; }
     if (dbg == 3 && (dn++ & 1)) return;
     VkRect2D one = { { 0, 0 }, { 1, 1 } };
+    static int scm = -1; if (scm < 0) { const char *e = getenv("PWR_VK_DBG_SC"); scm = e ? (int)strtol(e, NULL, 0) : 0; }
+    /* PWR_VK_DBG_SC=<mask>: 1x1 scissor for draws with depth write off (1), depth test off (2), into 256x512 eye targets (4), into other targets (8) */
+    int sc1 = dbg == 1 || (scm && (((scm & 1) && !r->dw) || ((scm & 2) && !r->dt) || ((scm & 4) && r->c->h == 512) || ((scm & 8) && r->c->h != 512)));
     if (r->p != *bound) { vkCmdBindPipeline(cb_draw, VK_PIPELINE_BIND_POINT_GRAPHICS, r->p); *bound = r->p; }
     /* dynamic state: only what changed since the previous draw of this command buffer (st_valid is cleared when a command buffer begins) */
     static VkViewport lvp; static VkRect2D lsc; static float lbc[4]; static VkCullModeFlags lcull; static VkCompareOp ldop; static uint8_t ldt, ldw;
     if (!st_valid || memcmp(&lvp, &r->vp, sizeof lvp)) { vkCmdSetViewport(cb_draw, 0, 1, &r->vp); lvp = r->vp; }
-    if (!st_valid || memcmp(&lsc, &r->sc, sizeof lsc)) { vkCmdSetScissor(cb_draw, 0, 1, dbg == 1 ? &one : &r->sc); lsc = r->sc; }
+    { VkRect2D want = sc1 ? one : r->sc; if (!st_valid || memcmp(&lsc, &want, sizeof lsc)) { vkCmdSetScissor(cb_draw, 0, 1, sc1 ? &one : &r->sc); lsc = sc1 ? one : r->sc; } }
     if (!st_valid || memcmp(lbc, r->bc, sizeof lbc)) { vkCmdSetBlendConstants(cb_draw, r->bc); memcpy(lbc, r->bc, sizeof lbc); }
     if (!st_valid) vkCmdSetFrontFace(cb_draw, VK_FRONT_FACE_COUNTER_CLOCKWISE);
     if (!st_valid || lcull != r->cull) { vkCmdSetCullMode(cb_draw, r->cull); lcull = r->cull; }

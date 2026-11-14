@@ -77,10 +77,19 @@ the same install folder as below. Windows players: see [Windows](#windows).
 python3 launcher/pwr_launcher.py
 ```
 
-1. **Game ROM:** Browse to your dump. It is verified straight away (title, encryption, game-code hash).
-2. **Build:** recompiles and compiles into the install folder (default `~/.local/share/pwr-port`). One to two minutes on a
-   multi-core machine.
-3. **Play:** pick or create a profile (each has its own saves and settings), adjust the display settings, Launch.
+![The launcher](docs/screenshots/launcher.png)
+
+The first start opens **Setup**:
+
+1. **Game dump:** Browse to your dump. It is verified straight away (container and encryption, title, game-code hash).
+2. **Build:** recompiles and compiles into the install folder (default `~/.local/share/pwr-port`), with the five stages
+   shown as it goes. One to two minutes on a multi-core machine. Missing build tools are listed under the Build button.
+3. **Play:** press **PLAY** at the top right. The profile picker next to it switches, creates and deletes profiles
+   (each has its own saves and settings).
+
+**Display**, **Graphics** and **Gameplay & audio** hold the profile's settings; they are saved as you change them, and the
+in-game F1 overlay changes the same file. **Log** shows the build output and, while the game runs, its messages
+(`pwr.log` in the profile folder). While the game runs, the PLAY button becomes **STOP**.
 
 Without the GUI:
 
